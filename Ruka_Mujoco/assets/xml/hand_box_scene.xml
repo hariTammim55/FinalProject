@@ -53,20 +53,20 @@
     <!-- Keyframe definitions for initial positions and controls -->
     <keyframe>
         <key name="home"
-          qpos="
-            0 0 0 0
-            0 0 0 0
-            0 0 0 0
-            0 0 0 0
-            0.007 0.06 -0.05 1 0 0 0
-          "
-          ctrl="
-           0 0 0
-           0 0 0
-           0 0 0
-           0 0 0
-           0 0 0
-          "
+            qpos="
+                0 0 0
+                0 0 0
+                0 0 0
+                0 0 0
+                0 0 0
+            "
+            ctrl="
+                0 0 0
+                0 0 0
+                0 0 0
+                0 0 0
+                0 0 0
+            "
         />
     </keyframe>
 </mujoco>
