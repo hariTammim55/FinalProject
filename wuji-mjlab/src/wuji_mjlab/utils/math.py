@@ -60,6 +60,38 @@ def random_quat_uniform(n: int, device: torch.device | str = "cpu") -> torch.Ten
   return torch.stack([w, x, y, z], dim=-1)
 
 
+def cube_rotation_quats(device: torch.device | str = "cpu") -> torch.Tensor:
+  """The 24 proper rotations of a cube (all multiples of 90 deg), as (24, 4).
+
+  Built from the signed permutation matrices with determinant +1. Index 0 is
+  the identity. Quaternions are (w, x, y, z) with a non-negative w.
+  """
+  import itertools
+
+  from mjlab.utils.lab_api.math import quat_from_matrix
+
+  mats = []
+  for perm in itertools.permutations(range(3)):
+    for signs in itertools.product((1.0, -1.0), repeat=3):
+      m = torch.zeros(3, 3)
+      for row, (col, sign) in enumerate(zip(perm, signs)):
+        m[row, col] = sign
+      if torch.det(m) > 0:
+        mats.append(m)
+  quats = quat_from_matrix(torch.stack(mats))
+  quats = torch.where(quats[:, :1] < 0, -quats, quats)
+  identity = torch.argmax(quats[:, 0])
+  order = [int(identity)] + [i for i in range(len(quats)) if i != int(identity)]
+  return quats[order].to(device)
+
+
+def nearest_cube_rotation_index(
+  quat: torch.Tensor, cube_quats: torch.Tensor
+) -> torch.Tensor:
+  """Index of the closest of the 24 cube rotations for each quaternion (N, 4)."""
+  return torch.argmax(torch.abs(quat @ cube_quats.T), dim=-1)
+
+
 def points_in_object_frame(
   points_w: torch.Tensor,
   object_pos_w: torch.Tensor,

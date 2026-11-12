@@ -16,7 +16,7 @@ from mjlab.utils.lab_api.math import (
 
 from wuji_mjlab.tasks.reorient.mdp._env_utils import resolve_env_ids
 from wuji_mjlab.tasks.reorient.mdp.runtime_state import get_reorient_runtime_state
-from wuji_mjlab.utils.math import random_quat_uniform
+from wuji_mjlab.utils.math import cube_rotation_quats, random_quat_uniform
 
 if TYPE_CHECKING:
   from mjlab.envs import ManagerBasedRlEnv
@@ -78,15 +78,46 @@ def reset_object_orientation(
   env_ids,
   pos_noise: float = 0.01,
   asset_cfg: SceneEntityCfg = _DEFAULT_OBJECT_CFG,
+  orientation_mode: str = "uniform",
+  rot_noise: float = 0.0,
+  tag_site_pattern: str = ".*_wrist_tag",
+  robot_entity_name: str = "robot",
 ) -> None:
+  """Reset the object pose with a random orientation.
+
+  Args:
+    orientation_mode: "uniform" samples SO(3) uniformly; "cube_90" picks one of
+      the 24 cube rotations (multiples of 90 deg) in the robot's tag frame, so
+      the cube starts face-aligned with the hand.
+    rot_noise: cube_90 only; max per-axis rotation noise (rad) added on top.
+  """
   env_ids = resolve_env_ids(env, env_ids)
   if env_ids.numel() == 0:
     return
 
   asset: Entity = env.scene[asset_cfg.name]
   default_state = asset.data.default_root_state[env_ids].clone()
+  n = env_ids.numel()
 
-  default_state[:, 3:7] = random_quat_uniform(env_ids.numel(), env.device)
+  if orientation_mode == "cube_90":
+    robot: Entity = env.scene[robot_entity_name]
+    tag_ids, _ = robot.find_sites(tag_site_pattern)
+    if not tag_ids:
+      raise ValueError(f"reset_object_orientation: no site '{tag_site_pattern}'.")
+    tag_quat_w = robot.data.site_pose_w[env_ids, tag_ids[0], 3:7]
+    cube_quats = cube_rotation_quats(env.device)
+    idx = torch.randint(0, cube_quats.shape[0], (n,), device=env.device)
+    rel = cube_quats[idx]
+    if rot_noise > 0.0:
+      noise = sample_uniform(-rot_noise, rot_noise, (n, 3), env.device)
+      rel = quat_mul(quat_from_euler_xyz(noise[:, 0], noise[:, 1], noise[:, 2]), rel)
+    default_state[:, 3:7] = quat_mul(tag_quat_w, rel)
+  elif orientation_mode == "uniform":
+    default_state[:, 3:7] = random_quat_uniform(n, env.device)
+  else:
+    raise ValueError(
+      f"reset_object_orientation: unknown orientation_mode '{orientation_mode}'."
+    )
 
   positions = default_state[:, :3] + env.scene.env_origins[env_ids]
   if pos_noise > 0.0:

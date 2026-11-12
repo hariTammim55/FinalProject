@@ -203,6 +203,43 @@ def palm_detach_reward(
   return (~palm_found & distal_found).float()
 
 
+class OrientationProgressReward(ManagerTermBase):
+  """Rate (rad/s) at which the cube's orientation error toward the goal shrinks.
+
+  Positive when the cube rotates toward the goal, negative when it rotates
+  away, zero when it is held still. Since rewards are scaled by dt, the
+  episode sum equals ``weight * total error reduction``. The step a new goal
+  appears (or right after reset) yields 0, so the error jump from a goal
+  switch is never rewarded or punished.
+  """
+
+  def __init__(self, cfg, env):
+    super().__init__(env)
+    self._command_name = cfg.params.get("command_name", "reorient_command")
+    self._object_cfg = cfg.params.get("object_cfg", _DEFAULT_OBJECT_CFG)
+    self._max_rate = float(cfg.params.get("max_rate", 4.0))
+    self._prev_err = torch.zeros(env.num_envs, device=env.device)
+    self._prev_goal = torch.zeros(env.num_envs, 4, device=env.device)
+    self._valid = torch.zeros(env.num_envs, dtype=torch.bool, device=env.device)
+
+  def reset(self, env_ids=None) -> None:
+    if env_ids is None:
+      env_ids = slice(None)
+    self._valid[env_ids] = False
+
+  def __call__(self, env, **_params) -> torch.Tensor:
+    obj: Entity = env.scene[self._object_cfg.name]
+    goal_quat = env.command_manager.get_term(self._command_name).goal_quat
+    err = quat_error_magnitude(obj.data.root_link_quat_w, goal_quat)
+    same_goal = (goal_quat - self._prev_goal).abs().amax(dim=-1) < 1e-6
+    rate = (self._prev_err - err) / env.step_dt
+    rate = torch.where(self._valid & same_goal, rate, torch.zeros_like(rate))
+    self._prev_err = err.detach().clone()
+    self._prev_goal = goal_quat.detach().clone()
+    self._valid[:] = True
+    return rate.clamp(-self._max_rate, self._max_rate)
+
+
 class TipSlidePenalty(ManagerTermBase):
   def __init__(self, cfg, env):
     super().__init__(env)
