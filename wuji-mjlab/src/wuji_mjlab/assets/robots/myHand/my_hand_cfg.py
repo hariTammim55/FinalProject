@@ -27,6 +27,17 @@ _FINGER_LINK_NAMES = {
   "Pinky": ("MCP", "DIP", "PIP"),
   "Thumb": ("CMC", "MCP", "IP"),
 }
+# Keyed by joint-name fragment; the first fragment found in the joint name
+# wins, so the thumb-specific "Thumb_MCP" must come before the generic "MCP"
+# (thumb MCP is 90 deg, matching its 0..1.57 rad actuator ctrlrange).
+_JOINT_LIMITS_DEG = {
+  "Thumb_MCP": 89.95437384,
+  "MCP": 139.92889864,
+  "DIP": 119.74817918,
+  "PIP": 119.74817918,
+  "CMC": 189.87821331,
+  "IP": 119.74817918,
+}
 
 
 def _get_assets(xml_path: Path, spec: mujoco.MjSpec) -> dict[str, bytes]:
@@ -55,11 +66,21 @@ def _apply_task_names(spec: mujoco.MjSpec) -> mujoco.MjSpec:
 
   for actuator in spec.actuators:
     actuator.target = joint_names[actuator.target]
+  for equality in spec.equalities:
+    if equality.type == mujoco.mjtEq.mjEQ_JOINT:
+      equality.name1 = joint_names[equality.name1]
+      if equality.name2:
+        equality.name2 = joint_names[equality.name2]
   for exclude in spec.excludes:
     exclude.bodyname1 = body_names[exclude.bodyname1]
     exclude.bodyname2 = body_names[exclude.bodyname2]
   for joint in spec.joints:
+    joint_type = next(
+      part for part in _JOINT_LIMITS_DEG if f"{part}_Joint" in joint.name
+    )
+    joint.range = (0.0, _JOINT_LIMITS_DEG[joint_type])
     joint.name = joint_names[joint.name]
+    joint.limited = True
   for body in spec.bodies:
     if body.name in body_names:
       body.name = body_names[body.name]

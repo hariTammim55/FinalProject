@@ -153,7 +153,13 @@ def torque_penalty(
   asset_cfg: SceneEntityCfg = _DEFAULT_ROBOT_CFG,
   curriculum_term: str = "",
   curriculum_min: float = 0.0,
+  normalize_by_forcerange: bool = False,
 ) -> torch.Tensor:
+  """Sum of squared actuator torques, relative to the effort limit if known.
+
+  normalize_by_forcerange: divide by each actuator's MJCF forcerange upper
+  bound (actuators without a positive bound are left unnormalized).
+  """
   del curriculum_term, curriculum_min
   robot: Entity = env.scene[asset_cfg.name]
   torques = robot.data.actuator_force[:, asset_cfg.actuator_ids]
@@ -161,6 +167,10 @@ def torque_penalty(
   if torque_limits is not None:
     limits = torque_limits[:, asset_cfg.actuator_ids].clamp_min(1e-3)
     normed = torques / limits
+  elif normalize_by_forcerange:
+    forcerange = env.sim.get_default_field("actuator_forcerange")
+    upper = forcerange[robot.indexing.ctrl_ids][asset_cfg.actuator_ids, 1]
+    normed = torques / torch.where(upper > 0, upper, torch.ones_like(upper))
   else:
     normed = torques
   return torch.sum(torch.square(normed), dim=-1)
@@ -266,6 +276,44 @@ class TipSlidePenalty(ManagerTermBase):
     else:
       return torch.zeros(env.num_envs, device=env.device)
     return torch.sum(rel_vel * in_contact, dim=-1)
+
+
+class TipContactReward(ManagerTermBase):
+  """Fraction of fingertips touching the object, saturating at ``target_tips``.
+
+  For a hand without abduction the palm only supports the cube; rotating it
+  needs fingertips actively pushing on it. Saturating at ``target_tips``
+  rewards a grasp without encouraging all five tips to clamp the cube still.
+  """
+
+  def __init__(self, cfg, env):
+    super().__init__(env)
+    robot_cfg = cfg.params.get("robot_cfg", _DEFAULT_ROBOT_CFG)
+    sensor_cfg = cfg.params.get("sensor_cfg", SceneEntityCfg("tip_object_contact"))
+    self._sensor = env.scene[sensor_cfg.name]
+    self._target = float(cfg.params.get("target_tips", 2))
+    self._binding = get_fingertip_contact_binding(env, robot_cfg, sensor_cfg)
+
+  def __call__(self, env, **_params) -> torch.Tensor:
+    data = self._sensor.data
+    if data.found is not None:
+      in_contact = self._binding.contact_mask(data.found > 0)
+    elif data.force is not None:
+      in_contact = self._binding.contact_mask(torch.norm(data.force, dim=-1) > 0.0)
+    else:
+      return torch.zeros(env.num_envs, device=env.device)
+    count = in_contact.float().sum(dim=-1)
+    return torch.clamp(count / self._target, max=1.0)
+
+
+def sensor_contact_found(env, sensor_name: str) -> torch.Tensor:
+  """1.0 while any primary of contact sensor ``sensor_name`` touches its secondary.
+
+  E.g. a sensor between the thumb links and the cube rewards keeping the
+  thumb on the cube, which a policy with strong fingers otherwise skips.
+  """
+  found = env.scene[sensor_name].data.found
+  return (found.reshape(env.num_envs, -1) > 0).any(dim=-1).float()
 
 
 def hold_escalation_value(

@@ -1,0 +1,482 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mujoco model="MyHand_RUKA_11Actuators">
+
+  <!--
+    MyHand RL model - RUKA tendon version (11 actuators, DIP coupled to PIP).
+    Copied from myHand/mjcf/hand_assembly.xml; only <actuator> and <equality> differ.
+    Geometry, body transforms, masses and inertias are retained from the user's XML.
+    Joint ranges are derived from the existing actuator ctrlrange values:
+      MCP: 2.44222 rad ~= 139.93 deg
+      finger DIP/PIP and thumb IP: 2.09 rad ~= 119.75 deg
+      thumb CMC: 3.314 rad ~= 189.90 deg
+      thumb MCP: 1.57 rad ~= 90 deg
+    These are provisional simulation limits and must be checked against the CAD/mechanical stops.
+  -->
+
+  <compiler angle="degree" eulerseq="xyz" meshdir="../meshes" autolimits="true"/>
+
+  <option
+      gravity="0 0 -9.81"
+      jacobian="sparse"
+      integrator="RK4"
+      timestep="0.002"
+      solver="Newton"
+      iterations="50"
+      tolerance="1e-10"/>
+
+  <visual>
+    <global azimuth="180" elevation="-20"/>
+    <headlight ambient="0.3 0.3 0.3" diffuse="0.6 0.6 0.6" specular="0 0 0"/>
+  </visual>
+
+  <asset>
+    <mesh name="Palm" file="Palm.STL"/>
+    <mesh name="Index_MCP" file="Index_MCP.STL"/>
+    <mesh name="Index_DIP" file="Index_DIP.STL"/>
+    <mesh name="Index_PIP" file="Index_PIP.STL"/>
+    <mesh name="Middle_MCP" file="Middle_MCP.STL"/>
+    <mesh name="Middle_DIP" file="Middle_DIP.STL"/>
+    <mesh name="Middle_PIP" file="Middle_PIP.STL"/>
+    <mesh name="Ring_MCP" file="Ring_MCP.STL"/>
+    <mesh name="Ring_DIP" file="Ring_DIP.STL"/>
+    <mesh name="Ring_PIP" file="Ring_PIP.STL"/>
+    <mesh name="Pinky_MCP" file="Pinky_MCP.STL"/>
+    <mesh name="Pinky_DIP" file="Pinky_DIP.STL"/>
+    <mesh name="Pinky_PIP" file="Pinky_PIP.STL"/>
+    <mesh name="Thumb_CMC" file="Thumb_CMC.STL"/>
+    <mesh name="Thumb_MCP" file="Thumb_MCP.STL"/>
+    <mesh name="Thumb_IP" file="Thumb_IP.STL"/>
+
+    <material name="contact_point_material" rgba="0.737 0.285 0.251 1" specular="0"/>
+    <texture name="grid" type="2d" builtin="checker"
+             rgb1=".1 .2 .3" rgb2=".2 .3 .4" width="300" height="300"/>
+    <material name="grid" texture="grid" texrepeat="100 100" reflectance=".2"/>
+  </asset>
+
+  <default>
+    <default class="visual">
+      <geom group="1"
+            friction="1 0.005 0.001"
+            conaffinity="0"
+            contype="0"
+            condim="3"
+            density="0"/>
+    </default>
+
+    <default class="joint">
+      <joint damping="0.0" armature="0.001" frictionloss="0.01"/>
+    </default>
+
+    <default class="collision">
+      <geom group="2"
+            friction="1.5 0.01 0.001"
+            conaffinity="2"
+            contype="2"
+            condim="3"
+            rgba="0 0.5 0.5 0"
+            density="0"
+            margin="0.001"/>
+    </default>
+  </default>
+
+  <worldbody>
+    <body name="world_frame" pos="0 0 0.05">
+
+      <body name="Palm_Link" pos="0 0 0" euler="-80.72907315 0 180">
+        <inertial
+            pos="0.003 -1.28993e-08 -0.012"
+            quat="0.5 0.5 0.5 -0.5"
+            mass="0.125670"
+            diaginertia="0.000135451 0.000192980 0.000273369"/>
+
+        <geom type="mesh" class="visual"
+              rgba="0.439216 0.47451 0.501961 1"
+              mesh="Palm" name="Palm_visual"/>
+        <geom name="Palm_collision" type="mesh" mesh="Palm" class="collision"/>
+
+        <!-- INDEX -->
+        <body name="Index_MCP_Link"
+              pos="0.0324 0.0138 -0.07975"
+              euler="-89.53729741 2.16788907 -96.96649902">
+          <inertial pos="-0.01 0.005 0.001"
+                    quat="0.707107 0 0 0.707107"
+                    mass="0.003279"
+                    diaginertia="3.55556e-07 1.53286e-07 4.11731e-07"/>
+          <joint name="Index_MCP_Joint"
+                 pos="-0.0004 -0.005 0.0021"
+                 axis="0 1 0"
+                 range="0 139.93"
+                 limited="true"
+                 class="joint"/>
+          <geom pos="-0.046 0.005 -0.003" type="mesh"
+                mesh="Index_MCP" class="collision" name="Index_MCP_collision"/>
+          <geom pos="-0.046 0.005 -0.003" type="mesh"
+                class="visual" rgba="0.439216 0.47451 0.501961 1"
+                mesh="Index_MCP" name="Index_MCP_visual"/>
+
+          <body name="Index_DIP_Link" pos="-0.034 0 0">
+            <inertial pos="-0.009 0.005 0.0017"
+                      quat="0.707107 0 0 0.707107"
+                      mass="0.003005"
+                      diaginertia="2.47842e-07 9.6253e-08 2.74994e-07"/>
+            <joint name="Index_DIP_Joint"
+                   pos="-0.0007 0 0.0015"
+                   axis="0 1 0"
+                   range="0 119.75"
+                   limited="true"
+                   class="joint"/>
+            <geom pos="-0.012 0.005 -0.003" type="mesh"
+                  class="visual" rgba="0.439216 0.47451 0.501961 1"
+                  mesh="Index_DIP" name="Index_DIP_visual"/>
+            <geom pos="-0.012 0.005 -0.003" type="mesh"
+                  mesh="Index_DIP" class="collision" name="Index_DIP_collision"/>
+
+            <body name="Index_PIP_Link" pos="-0.025 0.0045 0.002">
+              <inertial pos="-0.015 0.0004 -0.0005"
+                        quat="0.707107 0 0 0.707107"
+                        mass="0.003556"
+                        diaginertia="2.85955e-07 1.24672e-07 3.18221e-07"/>
+              <joint name="Index_PIP_Joint"
+                     pos="-0.00125 0 0.0008"
+                     axis="0 1 0"
+                     range="0 119.75"
+                     limited="true"
+                     class="joint"/>
+              <geom pos="0.013 0.0004 -0.005" type="mesh"
+                    class="visual" rgba="0.439216 0.47451 0.501961 1"
+                    mesh="Index_PIP" name="Index_PIP_visual"/>
+              <geom pos="0.013 0.0004 -0.005" type="mesh"
+                    class="collision" mesh="Index_PIP" name="Index_PIP_collision"/>
+              <geom type="sphere" name="Index_TIP" size="0.001"
+                    pos="-0.028 0 0" class="visual" rgba="1 0 0 0.3"/>
+            </body>
+          </body>
+        </body>
+
+        <!-- MIDDLE -->
+        <body name="Middle_MCP_Link"
+              pos="0.0153 0.01255 -0.0808"
+              euler="-90 2.50494451 -90">
+          <inertial pos="-0.01 0 0.001"
+                    quat="0.707107 0 0 0.707107"
+                    mass="0.003279"
+                    diaginertia="3.58654e-07 1.4997e-07 4.11949e-07"/>
+          <joint name="Middle_MCP_Joint"
+                 pos="-0.0004 0 0.0021"
+                 axis="0 1 0"
+                 range="0 139.93"
+                 limited="true"
+                 class="joint"/>
+          <geom pos="-0.046 0 -0.003" type="mesh"
+                class="visual" rgba="0.439216 0.47451 0.501961 1"
+                mesh="Middle_MCP" name="Middle_MCP_visual"/>
+          <geom pos="-0.046 0 -0.003" type="mesh"
+                mesh="Middle_MCP" class="collision" name="Middle_MCP_collision"/>
+
+          <body name="Middle_DIP_Link" pos="-0.034 0 0">
+            <inertial pos="-0.009 0 0.0017"
+                      quat="0.707107 0 0 0.707107"
+                      mass="0.003005"
+                      diaginertia="2.50211e-07 9.3781e-08 2.75097e-07"/>
+            <joint name="Middle_DIP_Joint"
+                   pos="-0.0007 -0.017 0.00155"
+                   axis="0 1 0"
+                   range="0 119.75"
+                   limited="true"
+                   class="joint"/>
+            <geom pos="-0.012 0 -0.003" type="mesh"
+                  class="visual" rgba="0.439216 0.47451 0.501961 1"
+                  mesh="Middle_DIP" name="Middle_DIP_visual"/>
+            <geom pos="-0.012 0 -0.003" type="mesh"
+                  mesh="Middle_DIP" class="collision" name="Middle_DIP_collision"/>
+
+            <body name="Middle_PIP_Link" pos="-0.026 0 0.0015">
+              <inertial pos="-0.014 -0.00005 -0.0001"
+                        quat="0.707107 0 0 0.707107"
+                        mass="0.003556"
+                        diaginertia="2.88339e-07 1.22041e-07 3.18468e-07"/>
+              <joint name="Middle_PIP_Joint"
+                     pos="-0.00025 0 0.00129"
+                     axis="0 1 0"
+                     range="0 119.75"
+                     limited="true"
+                     class="joint"/>
+              <geom pos="0.014 0 -0.0045" type="mesh"
+                    class="visual" rgba="0.439216 0.47451 0.501961 1"
+                    mesh="Middle_PIP" name="Middle_PIP_visual"/>
+              <geom pos="0.014 0 -0.0045" type="mesh"
+                    class="collision" mesh="Middle_PIP" name="Middle_PIP_collision"/>
+              <geom type="sphere" name="Middle_TIP" size="0.001"
+                    pos="-0.028 0 0" class="visual" rgba="1 0 0 0.3"/>
+            </body>
+          </body>
+        </body>
+
+        <!-- RING -->
+        <body name="Ring_MCP_Link"
+              pos="-0.0083 0.01555 -0.07915"
+              euler="-90.20813654 3.2740386 -83.9723883">
+          <inertial pos="-0.011 0 0"
+                    quat="0.707107 0 0 0.707107"
+                    mass="0.003279"
+                    diaginertia="3.56278e-07 1.52189e-07 4.12106e-07"/>
+          <joint name="Ring_MCP_Joint"
+                 pos="-0.0004 0 0.0011"
+                 axis="0 1 0"
+                 range="0 139.93"
+                 limited="true"
+                 class="joint"/>
+          <geom pos="-0.046 0 -0.004" type="mesh"
+                class="visual" rgba="0.439216 0.47451 0.501961 1"
+                mesh="Ring_MCP" name="Ring_MCP_visual"/>
+          <geom pos="-0.046 0 -0.004" type="mesh"
+                mesh="Ring_MCP" class="collision" name="Ring_MCP_collision"/>
+
+          <body name="Ring_DIP_Link" pos="-0.036 0 0">
+            <inertial pos="-0.0075 0 0.0002"
+                      quat="0.707107 0 0 0.707107"
+                      mass="0.003005"
+                      diaginertia="2.48574e-07 9.5344e-08 2.75171e-07"/>
+            <joint name="Ring_DIP_Joint"
+                   pos="0 0 0"
+                   axis="0 1 0"
+                   range="0 119.75"
+                   limited="true"
+                   class="joint"/>
+            <geom pos="-0.01 0 -0.004" type="mesh"
+                  class="visual" rgba="0.439216 0.47451 0.501961 1"
+                  mesh="Ring_DIP" name="Ring_DIP_visual"/>
+            <geom pos="-0.01 0 -0.004" type="mesh"
+                  mesh="Ring_DIP" class="collision" name="Ring_DIP_collision"/>
+
+            <body name="Ring_PIP_Link" pos="-0.025 0 0.001">
+              <inertial pos="-0.013 0 -0.0007"
+                        quat="0.707107 0 0 0.707107"
+                        mass="0.003556"
+                        diaginertia="2.86242e-07 1.23898e-07 3.18709e-07"/>
+              <joint name="Ring_PIP_Joint"
+                     pos="0.00074 0 0.00077"
+                     axis="0 1 0"
+                     range="0 119.75"
+                     limited="true"
+                     class="joint"/>
+              <geom pos="0.015 0 -0.005" type="mesh"
+                    class="visual" rgba="0.439216 0.47451 0.501961 1"
+                    mesh="Ring_PIP" name="Ring_PIP_visual"/>
+              <geom pos="0.015 0 -0.005" type="mesh"
+                    class="collision" mesh="Ring_PIP" name="Ring_PIP_collision"/>
+              <geom type="sphere" name="Ring_TIP" size="0.001"
+                    pos="-0.028 0 0" class="visual" rgba="1 0 0 0.3"/>
+            </body>
+          </body>
+        </body>
+
+        <!-- PINKY -->
+        <body name="Pinky_MCP_Link"
+              pos="-0.0311 0.01955 -0.07546"
+              euler="-89.77692954 6.27276862 -78.92161292">
+          <inertial pos="-0.01 0 0.0002"
+                    quat="0.707107 0 0 0.707107"
+                    mass="0.003079"
+                    diaginertia="3.24315e-07 1.4317e-07 3.79249e-07"/>
+          <joint name="Pinky_MCP_Joint"
+                 pos="0.00121 0 0.00118"
+                 axis="0 1 0"
+                 range="0 139.93"
+                 limited="true"
+                 class="joint"/>
+          <geom pos="-0.042 0 -0.004" type="mesh"
+                class="visual" rgba="0.439216 0.47451 0.501961 1"
+                mesh="Pinky_MCP" name="Pinky_MCP_visual"/>
+          <geom pos="-0.042 0 -0.004" type="mesh"
+                mesh="Pinky_MCP" class="collision" name="Pinky_MCP_collision"/>
+
+          <body name="Pinky_DIP_Link"
+                pos="-0.03188 0 -0.00057"
+                euler="-0.04676326 -0.08814738 0.00420511">
+            <inertial pos="-0.009 0 0.0005"
+                      quat="0.707107 0 0 0.707107"
+                      mass="0.002608"
+                      diaginertia="1.85943e-07 8.2052e-08 2.10553e-07"/>
+            <joint name="Pinky_DIP_Joint"
+                   pos="-0.0002 0 0.00084"
+                   axis="0 1 0"
+                   range="0 119.75"
+                   limited="true"
+                   class="joint"/>
+            <geom pos="-0.01 0 -0.0037" type="mesh"
+                  class="visual" rgba="0.439216 0.47451 0.501961 1"
+                  mesh="Pinky_DIP" name="Pinky_DIP_visual"/>
+            <geom pos="-0.01 0 -0.004" type="mesh"
+                  mesh="Pinky_DIP" class="collision" name="Pinky_DIP_collision"/>
+
+            <body name="Pinky_PIP_Link" pos="-0.023 0 0.001">
+              <inertial pos="-0.012 -0.0001 -0.0008"
+                        quat="0.707107 0 0 0.707107"
+                        mass="0.003052"
+                        diaginertia="1.89487e-07 1.05326e-07 2.22124e-07"/>
+              <joint name="Pinky_PIP_Joint"
+                     pos="0.00027 -0.017 0.000775"
+                     axis="0 1 0"
+                     range="0 119.75"
+                     limited="true"
+                     class="joint"/>
+              <geom pos="0.013 0 -0.005" type="mesh"
+                    class="visual" rgba="0.439216 0.47451 0.501961 1"
+                    mesh="Pinky_PIP" name="Pinky_PIP_visual"/>
+              <geom pos="0.013 0 -0.005" type="mesh"
+                    class="collision" mesh="Pinky_PIP" name="Pinky_PIP_collision"/>
+              <geom type="sphere" name="Pinky_TIP" size="0.001"
+                    pos="-0.024 0 0" class="visual" rgba="1 0 0 0.3"/>
+            </body>
+          </body>
+        </body>
+
+        <!-- THUMB -->
+        <body name="Thumb_CMC_Link"
+              pos="0.037688 0.022225 -0.025118"
+              euler="-90.00016225 -1.82515453 -0.00001069">
+          <inertial pos="0.01 -0.00468252 -0.004"
+                    quat="1 0 0 0"
+                    mass="0.005187"
+                    diaginertia="3.79488e-07 5.59164e-07 7.43563e-07"/>
+          <joint name="Thumb_CMC_Joint"
+                 pos="0 0 0"
+                 axis="0 -1 0"
+                 range="0 189.90"
+                 limited="true"
+                 class="joint"/>
+          <geom pos="0 0 -0.007" type="mesh"
+                class="visual" rgba="0.439216 0.47451 0.501961 1"
+                mesh="Thumb_CMC" name="Thumb_CMC_visual"/>
+          <geom pos="0 0 -0.007" type="mesh"
+                mesh="Thumb_CMC" class="collision" name="Thumb_CMC_collision"/>
+
+          <body name="Thumb_MCP_Link"
+                pos="0.033935 -0.0044094 -0.007"
+                euler="-89.99967589 -0.00042092 -180">
+            <inertial pos="-0.009 0.003 0.001"
+                      quat="0.923880 0.382683 0 0"
+                      mass="0.0033"
+                      diaginertia="1.24549e-07 3.15992e-07 2.98158e-07"/>
+            <joint name="Thumb_MCP_Joint"
+                   pos="0 0 0"
+                   axis="0 1 0"
+                   range="0 90"
+                   limited="true"
+                   class="joint"/>
+            <geom pos="-0.013 0 -0.0019" type="mesh"
+                  class="visual" rgba="0.439216 0.47451 0.501961 1"
+                  mesh="Thumb_MCP" name="Thumb_MCP_visual"
+                  euler="-45.83658721 0 0"/>
+            <geom pos="-0.013 0 -0.0021" type="mesh"
+                  mesh="Thumb_MCP" class="collision" name="Thumb_MCP_collision"
+                  euler="-45.83658721 0 0"/>
+
+            <body name="Thumb_IP_Link"
+                  pos="-0.028 0.0035 0.0015"
+                  euler="-45 0 0">
+              <inertial pos="-0.012 0 -0.0005"
+                        quat="0.707107 0.707107 0 0"
+                        mass="0.003461"
+                        diaginertia="1.2235e-07 2.91037e-07 2.73072e-07"/>
+              <joint name="Thumb_IP_Joint"
+                     pos="-0.0007 -0.008 0.0008"
+                     axis="0 1 0"
+                     range="0 119.75"
+                     limited="true"
+                     class="joint"/>
+              <geom pos="0.015 0 -0.005" type="mesh"
+                    class="visual" rgba="0.439216 0.47451 0.501961 1"
+                    mesh="Thumb_IP" name="Thumb_IP_visual"/>
+              <geom pos="0.015 0 -0.005" type="mesh"
+                    class="collision" mesh="Thumb_IP" name="Thumb_IP_collision"/>
+              <geom type="sphere" name="Thumb_TIP" size="0.001"
+                    pos="-0.028 0 0" class="visual" rgba="1 0 0 0.3"/>
+            </body>
+          </body>
+        </body>
+
+      </body>
+    </body>
+  </worldbody>
+
+  <contact>
+    <!-- Retain the original palm-to-proximal-finger exclusions. -->
+    <exclude body1="Palm_Link" body2="Thumb_CMC_Link"/>
+    <exclude body1="Palm_Link" body2="Ring_MCP_Link"/>
+    <exclude body1="Palm_Link" body2="Pinky_MCP_Link"/>
+    <exclude body1="Palm_Link" body2="Middle_MCP_Link"/>
+    <exclude body1="Palm_Link" body2="Index_MCP_Link"/>
+  </contact>
+
+  <actuator>
+    <!--
+      RUKA tendon actuation: 11 servos (12 V, no current limit).
+        fingers: XM430-W210-T (stall 3.0 N*m), thumb: XM430-W350-T (4.1 N*m)
+        tendon spool diameter 25.5 mm (radius r_p = 12.75 mm)
+      Each finger: one servo on MCP, ONE tendon pulling PIP and DIP together.
+      NOTE the MJCF names: *_DIP_Joint is the middle joint (anatomical PIP,
+      driven) and *_PIP_Joint the tip joint (anatomical DIP), which follows it
+      through the <equality> below. Thumb: one servo per joint.
+
+      Per driven joint with tendon moment arm r_j (m):
+        forcerange = stall / r_p * r_j                       (joint torque limit)
+        kp = (KPP/128) * (4096/2pi) / 885 * stall * (r_j/r_p)^2
+             with KPP = 800 = Dynamixel Position P Gain (factory default),
+             so keep the real servos at P Gain 800 for sim2real.
+        kv = 0.0504 * kp  (same kv/kp ratio as the 15-actuator model)
+      Moment arms (from RUKA's calibrated motor ranges, +-30%):
+        finger MCP 8.4 mm, finger PIP+DIP 12.4 mm (sum over both joints),
+        thumb CMC 5.3 mm, MCP 7.5 mm, IP 5.3 mm.
+      Recompute with assets/robots/myHandRuka/my_hand_ruka_cfg.py
+      (ruka_actuator_params) when the moment arms or servo limits change.
+    -->
+    <position name="Index_MCP_actuator" joint="Index_MCP_Joint"
+              kp="5.9948" kv="0.3021" ctrlrange="0 2.44222"
+              forcelimited="true" forcerange="-1.9765 1.9765"/>
+    <position name="Index_PIPDIP_actuator" joint="Index_DIP_Joint"
+              kp="13.0635" kv="0.6584" ctrlrange="0 2.09"
+              forcelimited="true" forcerange="-2.9176 2.9176"/>
+
+    <position name="Middle_MCP_actuator" joint="Middle_MCP_Joint"
+              kp="5.9948" kv="0.3021" ctrlrange="0 2.44222"
+              forcelimited="true" forcerange="-1.9765 1.9765"/>
+    <position name="Middle_PIPDIP_actuator" joint="Middle_DIP_Joint"
+              kp="13.0635" kv="0.6584" ctrlrange="0 2.09"
+              forcelimited="true" forcerange="-2.9176 2.9176"/>
+
+    <position name="Ring_MCP_actuator" joint="Ring_MCP_Joint"
+              kp="5.9948" kv="0.3021" ctrlrange="0 2.44222"
+              forcelimited="true" forcerange="-1.9765 1.9765"/>
+    <position name="Ring_PIPDIP_actuator" joint="Ring_DIP_Joint"
+              kp="13.0635" kv="0.6584" ctrlrange="0 2.09"
+              forcelimited="true" forcerange="-2.9176 2.9176"/>
+
+    <position name="Pinky_MCP_actuator" joint="Pinky_MCP_Joint"
+              kp="5.9948" kv="0.3021" ctrlrange="0 2.44222"
+              forcelimited="true" forcerange="-1.9765 1.9765"/>
+    <position name="Pinky_PIPDIP_actuator" joint="Pinky_DIP_Joint"
+              kp="13.0635" kv="0.6584" ctrlrange="0 2.09"
+              forcelimited="true" forcerange="-2.9176 2.9176"/>
+
+    <position name="Thumb_CMC_actuator" joint="Thumb_CMC_Joint"
+              kp="3.2616" kv="0.1644" ctrlrange="0 3.314"
+              forcelimited="true" forcerange="-1.7043 1.7043"/>
+    <position name="Thumb_MCP_actuator" joint="Thumb_MCP_Joint"
+              kp="6.5313" kv="0.3292" ctrlrange="0 1.57"
+              forcelimited="true" forcerange="-2.4118 2.4118"/>
+    <position name="Thumb_IP_actuator" joint="Thumb_IP_Joint"
+              kp="3.2616" kv="0.1644" ctrlrange="0 2.09"
+              forcelimited="true" forcerange="-1.7043 1.7043"/>
+  </actuator>
+
+  <equality>
+    <!-- Tip joint follows the middle joint 1:1 (one tendon over both). -->
+    <joint name="Index_PIP_DIP_coupling" joint1="Index_PIP_Joint" joint2="Index_DIP_Joint" polycoef="0 1 0 0 0"/>
+    <joint name="Middle_PIP_DIP_coupling" joint1="Middle_PIP_Joint" joint2="Middle_DIP_Joint" polycoef="0 1 0 0 0"/>
+    <joint name="Ring_PIP_DIP_coupling" joint1="Ring_PIP_Joint" joint2="Ring_DIP_Joint" polycoef="0 1 0 0 0"/>
+    <joint name="Pinky_PIP_DIP_coupling" joint1="Pinky_PIP_Joint" joint2="Pinky_DIP_Joint" polycoef="0 1 0 0 0"/>
+  </equality>
+
+</mujoco>

@@ -6,7 +6,7 @@ import mujoco.viewer
 # Paths resolved relative to the repo root, so the script works from any cwd.
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ASSETS = REPO_ROOT / "src" / "wuji_mjlab" / "assets"
-XML_PATH = ASSETS / "robots" / "myHand" / "mjcf" / "hand_assembly.xml"
+XML_PATH = ASSETS / "robots" / "myHandRuka" / "mjcf" / "hand_assembly_ruka.xml"
 CUBE_XML_PATH = ASSETS / "objects" / "merah_putih_cube" / "xmls" / "cube.xml"
 CUBE_POS = (-0.005, -0.04, 0.115)  # just above the palm (palm top z ≈ 0.077)
 

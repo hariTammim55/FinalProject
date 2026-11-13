@@ -34,15 +34,26 @@ def joint_pos_target_error(
   env,
   asset_cfg: SceneEntityCfg = _DEFAULT_ROBOT_CFG,
 ) -> torch.Tensor:
+  """Normalized joint position minus normalized action target.
+
+  When fewer joints are actuated than the entity has (e.g. a DIP joint
+  coupled to PIP), the error covers only the actuated joints, in action order.
+  """
   asset: Entity = env.scene[asset_cfg.name]
-  joint_pos = asset.data.joint_pos[:, asset_cfg.joint_ids]
-  soft_limits = asset.data.soft_joint_pos_limits[:, asset_cfg.joint_ids]
+  action_term = env.action_manager.get_term("joint_pos")
+  processed = action_term.processed_action
+  joint_ids = asset_cfg.joint_ids
+  if processed.shape[1] != asset.data.joint_pos.shape[1]:
+    joint_ids = action_term._target_ids
+    target = processed
+  else:
+    target = processed[:, joint_ids]
+  joint_pos = asset.data.joint_pos[:, joint_ids]
+  soft_limits = asset.data.soft_joint_pos_limits[:, joint_ids]
   center = 0.5 * (soft_limits[..., 0] + soft_limits[..., 1])
   half_range = 0.5 * (soft_limits[..., 1] - soft_limits[..., 0])
   normalized_pos = ((joint_pos - center) / (half_range + 1e-6)).clamp(-1.0, 1.0)
 
-  processed = env.action_manager.get_term("joint_pos").processed_action
-  target = processed[:, asset_cfg.joint_ids]
   normalized_target = ((target - center) / (half_range + 1e-6)).clamp(-1.0, 1.0)
 
   return normalized_pos - normalized_target

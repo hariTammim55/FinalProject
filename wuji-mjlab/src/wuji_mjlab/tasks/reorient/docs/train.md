@@ -11,7 +11,7 @@ Complete [environment installation](../../../../../README.md#installation) first
 | `WujiHand_Reorient` | Wuji Hand 1, right, 20 Hz |
 | `WujiHand2_Reorient` | Wuji Hand 2, right, 20 Hz baseline |
 | `WujiHand2_Reorient_50Hz` | Wuji Hand 2, right, 50 Hz, recommended |
-| `WujiMyHand_Reorient` | Custom 15-DOF hand from `myHand/mjcf/hand_assembly.xml` |
+| `MyHand_Reorient` | Custom RUKA-design hand from `myHandRuka/mjcf/hand_assembly_ruka.xml` (15 joints, 11 tendon servos), 20 Hz |
 
 ## Train
 
@@ -40,7 +40,7 @@ pixi run train --task WujiHand2_Reorient_50Hz \
 For the custom hand XML in this workspace, start with a small smoke run:
 
 ```bash
-pixi run train --task WujiMyHand_Reorient \
+pixi run train --task MyHand_Reorient \
   --agent.logger tensorboard --agent.upload-model False \
   env.scene.num_envs=64 agent.max_iterations=10
 ```

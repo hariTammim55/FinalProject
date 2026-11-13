@@ -29,7 +29,10 @@ def main() -> int:
 
   task_ids = list_tasks()
   if not args.all:
-    task_ids = [task_id for task_id in task_ids if task_id.startswith("Wuji")]
+    # Wuji tasks plus this workspace's custom hand (MyHand_Reorient).
+    task_ids = [
+      task_id for task_id in task_ids if task_id.startswith(("Wuji", "MyHand"))
+    ]
   for idx, task_id in enumerate(task_ids, start=1):
     table.add_row([idx, task_id])
 
