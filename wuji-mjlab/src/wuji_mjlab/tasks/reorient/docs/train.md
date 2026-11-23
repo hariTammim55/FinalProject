@@ -11,7 +11,7 @@ Complete [environment installation](../../../../../README.md#installation) first
 | `WujiHand_Reorient` | Wuji Hand 1, right, 20 Hz |
 | `WujiHand2_Reorient` | Wuji Hand 2, right, 20 Hz baseline |
 | `WujiHand2_Reorient_50Hz` | Wuji Hand 2, right, 50 Hz, recommended |
-| `MyHand_Reorient` | Custom RUKA-design hand from `myHandRuka/mjcf/hand_assembly_ruka.xml` (15 joints, 11 tendon servos), 20 Hz |
+| `MyHand_Reorient` | Custom RUKA-design hand from `MyHand/mjcf/hand_assembly.xml` (15 joints, 11 tendon servos), 20 Hz |
 
 ## Train
 

@@ -306,6 +306,27 @@ class TipContactReward(ManagerTermBase):
     return torch.clamp(count / self._target, max=1.0)
 
 
+def site_object_proximity(
+  env,
+  robot_cfg: SceneEntityCfg,
+  object_name: str = "object",
+  surface_offset: float = 0.027,
+  std: float = 0.02,
+) -> torch.Tensor:
+  """exp(-gap / std): 1.0 at the cube surface, decaying with distance.
+
+  ``gap`` is the distance from the (single) site in ``robot_cfg`` to the cube
+  center minus ``surface_offset`` (~cube half size), clamped at 0. Dense
+  shaping for a link that never touches the cube by chance, so a sparse
+  contact reward alone gives no gradient.
+  """
+  robot: Entity = env.scene[robot_cfg.name]
+  site = robot.data.site_pos_w[:, robot_cfg.site_ids].reshape(env.num_envs, -1, 3)
+  cube = env.scene[object_name].data.root_link_pos_w.unsqueeze(1)
+  gap = (torch.norm(site - cube, dim=-1) - surface_offset).clamp(min=0.0)
+  return torch.exp(-gap / std).mean(dim=-1)
+
+
 def sensor_contact_found(env, sensor_name: str) -> torch.Tensor:
   """1.0 while any primary of contact sensor ``sensor_name`` touches its secondary.
 

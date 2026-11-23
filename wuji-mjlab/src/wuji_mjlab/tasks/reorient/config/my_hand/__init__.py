@@ -12,7 +12,7 @@ from .env_cfgs import my_hand_reorient_env_cfg
 
 
 def my_hand_reorient_ppo_runner_cfg(
-  run_name: str = "MyHandRuka_Reorient", max_iterations: int = 6000
+  run_name: str = "MyHand_Reorient", max_iterations: int = 6000
 ) -> RslRlOnPolicyRunnerCfg:
   """Wuji's PPO cfg with more sustained exploration for the custom hand.
 
@@ -42,8 +42,8 @@ register_mjlab_task(
   # 4096 envs fit a 16 GB GPU (8192 needs ~19.5 GB).
   env_cfg=my_hand_reorient_env_cfg(num_envs=4096),
   play_env_cfg=my_hand_reorient_env_cfg(play=True),
-  # Log folders keep the "_MyHandRuka_Reorient" suffix so they stay distinct
-  # from the removed 15-actuator task's "_MyHand_Reorient" runs.
+  # New log folders end in "_MyHand_Reorient"; runs before the rename end in
+  # "_MyHandRuka_Reorient" (same robot and task, checkpoints load as-is).
   rl_cfg=my_hand_reorient_ppo_runner_cfg(),
   runner_cls=WujiOnPolicyRunner,
 )

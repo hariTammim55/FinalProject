@@ -1,6 +1,6 @@
 """MyHand_Reorient: in-hand cube reorientation with the custom RUKA-design hand.
 
-The robot is assets/robots/myHandRuka: 15 joints, 11 servo-derived actuators
+The robot is assets/robots/MyHand: 15 joints, 11 servo-derived actuators
 (each finger: MCP + one tendon pulling PIP and DIP together, DIP coupled to
 PIP; thumb: CMC, MCP, IP). No touch sensors in the observations.
 
@@ -22,8 +22,8 @@ from mjlab.managers.scene_entity_config import SceneEntityCfg
 from mjlab.sensor import ContactMatch, ContactSensorCfg
 
 from wuji_mjlab.assets.objects.merah_putih_cube.object_cfg import get_inhand_object_cfg
-from wuji_mjlab.assets.robots.myHandRuka.my_hand_ruka_cfg import (
-  get_my_hand_ruka_cfg,
+from wuji_mjlab.assets.robots.MyHand.my_hand_cfg import (
+  get_my_hand_cfg,
 )
 from wuji_mjlab.tasks.reorient import mdp
 from wuji_mjlab.tasks.reorient.reorient_constants import (
@@ -39,13 +39,13 @@ MY_HAND_ROOT_POS = (0.0, 0.0, 0.5)
 # thumb within 20 s even with no finger motion, and the fingers (no abduction)
 # cannot pull it back. CPU probe with random finger motion, 20 s per trial:
 #   tilt   0: 54% drop | -5: 1% drop | -8: 12% | -12: 77% | -15: 100%
-MY_HAND_TILT_TOWARD_THUMB_DEG = 3.0
+MY_HAND_TILT_TOWARD_THUMB_DEG = 0.0
 _tilt = math.radians(-MY_HAND_TILT_TOWARD_THUMB_DEG)
 MY_HAND_ROOT_ROT = (math.cos(_tilt / 2), 0.0, math.sin(_tilt / 2), 0.0)
 
 # Cube spawn point, given relative to the hand root before tilting, then
 # rotated with the hand so it stays above the same spot on the fingers.
-_CUBE_OFFSET_FROM_ROOT = (0.0, -0.04, 0.08)
+_CUBE_OFFSET_FROM_ROOT = (-0.01, -0.075, 0.08)
 MY_HAND_CUBE_INIT_POS = (
   MY_HAND_ROOT_POS[0] + math.cos(_tilt) * _CUBE_OFFSET_FROM_ROOT[0]
   + math.sin(_tilt) * _CUBE_OFFSET_FROM_ROOT[2],
@@ -71,17 +71,22 @@ MY_HAND_SUCCESS_THRESHOLD = 0.4  # rad (~23 deg)
 # when resuming a run that already passed the yaw stage: the curriculum state
 # is not saved in checkpoints and otherwise restarts at yaw only.
 # Tag axes whose +-90 deg turns are used as goals (training and play).
-# Current stage: yaw and pitch only, both directions. Add
-# MY_HAND_TAG_ROLL_AXIS to bring roll back.
-MY_HAND_GOAL_AXES = (MY_HAND_TAG_YAW_AXIS, MY_HAND_TAG_PITCH_AXIS)
+# Current stage: yaw, pitch and roll, both directions (roll +-90 added after
+# run 2026-11-14_21-35-15 reached ~99% on all four yaw/pitch turns).
+MY_HAND_GOAL_AXES = (
+  MY_HAND_TAG_YAW_AXIS,
+  MY_HAND_TAG_PITCH_AXIS,
+  MY_HAND_TAG_ROLL_AXIS,
+)
 # Unlock order; axes not in MY_HAND_GOAL_AXES are skipped.
 MY_HAND_AXIS_UNLOCK_ORDER = (
   MY_HAND_TAG_YAW_AXIS,
   MY_HAND_TAG_PITCH_AXIS,
   MY_HAND_TAG_ROLL_AXIS,
 )
-# 2 = yaw and pitch active from the start (resuming from model_4999.pt, which
-# already does yaw+-90 and pitch-90). Use 1 for a fresh run.
+# 2 = yaw and pitch active from the start; roll unlocks once both pass
+# MY_HAND_AXIS_UNLOCK_THRESHOLD (immediately when resuming from model_4999.pt
+# of run 2026-11-14_21-35-15). Use 1 for a fresh run.
 MY_HAND_AXIS_INITIAL_UNLOCKED = 2
 # An axis counts as mastered once ONE of its directions succeeds this often
 # (the other direction = 3 turns this way, see cube_turn_planner).
@@ -130,6 +135,28 @@ MY_HAND_TORQUE_WEIGHT = -6.0
 # Episode_Reward/thumb_contact stays near 0.
 # Same scale as tip_contact (1.0 per second at full contact).
 MY_HAND_THUMB_CONTACT_WEIGHT = 1.0
+# Why the thumb stayed off the cube (model_6000 of run 2026-11-13_17-45-19):
+# targets were default +- 0.5 rad, so the thumb could only reach CMC 0.90 /
+# MCP 0.80 / IP 1.00 rad and sat at exactly those limits, while a kinematic
+# sweep puts the thumb tip on the cube at CMC ~1.8-2.4, MCP 0.4-1.3,
+# IP 0.2-2.1 rad (tip stayed 60-135 mm from the cube center). Re-center and
+# widen the thumb's action range to cover that; the reset pose is unchanged
+# and fingers 2-5 keep default +- 0.5.
+MY_HAND_ACTION_SCALE = {
+  ".*_finger1_joint1": 1.2,  # CMC  0.0 .. 2.4
+  ".*_finger1_joint2": 0.8,  # MCP  0.0 .. 1.57 (joint limit)
+  ".*_finger1_joint3": 1.0,  # IP   0.0 .. 2.0
+  ".*": 0.5,
+}
+MY_HAND_ACTION_CENTER = {
+  ".*_finger1_joint1": 1.2,
+  ".*_finger1_joint2": 0.8,
+  ".*_finger1_joint3": 1.0,
+}
+# Dense pull of the thumb tip (on Thumb_IP_Link) toward the cube surface:
+# exp(-gap/2 cm), so it pays ~0.08 at 5 cm and 1.0 on the cube. Kept well below
+# orientation_progress (20) so holding the cube still is not worth it.
+MY_HAND_THUMB_REACH_WEIGHT = 0.5
 
 
 def _add_wrist_tag(base_spec_fn: Callable[[], mujoco.MjSpec]) -> mujoco.MjSpec:
@@ -147,7 +174,7 @@ def _add_wrist_tag(base_spec_fn: Callable[[], mujoco.MjSpec]) -> mujoco.MjSpec:
 
 
 def get_my_hand_rig_cfg() -> EntityCfg:
-  robot_cfg = get_my_hand_ruka_cfg()
+  robot_cfg = get_my_hand_cfg()
   robot_cfg.spec_fn = partial(_add_wrist_tag, robot_cfg.spec_fn)
   return robot_cfg
 
@@ -219,7 +246,7 @@ def my_hand_reorient_env_cfg(
   )
   # Exploration noise is penalized as "non-smooth" motion; Wuji's -1.0 made
   # action_rate the largest negative term for this hand and discouraged moving.
-  cfg.rewards["action_rate"].weight = -0.3
+  cfg.rewards["action_rate"].weight = -1.0
   # Without abduction the palm only supports the cube; rotating it needs
   # fingertips pushing on it. Rewards up to 2 tips in contact (not a clamp).
   cfg.rewards["tip_contact"] = RewardTermCfg(
@@ -249,6 +276,24 @@ def my_hand_reorient_env_cfg(
     weight=MY_HAND_THUMB_CONTACT_WEIGHT,
     params={"sensor_name": "thumb_object_contact"},
   )
+  cfg.rewards["thumb_reach"] = RewardTermCfg(
+    func=mdp.site_object_proximity,
+    weight=MY_HAND_THUMB_REACH_WEIGHT,
+    params={
+      "robot_cfg": SceneEntityCfg("robot", site_names=(".*_finger1_tip",)),
+      "surface_offset": 0.027,  # merah_putih cube half size
+      "std": 0.02,
+    },
+  )
+  # Wider thumb action range (see MY_HAND_ACTION_SCALE).
+  cfg.actions["joint_pos"].action_scale = MY_HAND_ACTION_SCALE
+  cfg.actions["joint_pos"].action_center = MY_HAND_ACTION_CENTER
+  # hand_pose pulls every joint toward its reset pose; for the thumb that is
+  # the open pose away from the cube (CMC 2.0 would cost ~-0.5/s), so only
+  # fingers 2-5 keep it.
+  cfg.rewards["hand_pose"].params["asset_cfg"] = SceneEntityCfg(
+    "robot", joint_names=(".*_finger[2-5]_joint.*",)
+  )
   cfg.rewards["torque"].params["normalize_by_forcerange"] = True
   cfg.rewards["torque"].weight = MY_HAND_TORQUE_WEIGHT
   cfg.scene.entities = {
@@ -266,6 +311,6 @@ def my_hand_reorient_env_cfg(
     rot=(1.0, 0.0, 0.0, 0.0),
   )
   if play:
-    cfg.scene.num_envs = 1
+    cfg.scene.num_envs = 4
   cfg.viewer.body_name = "right_palm_link"
   return cfg

@@ -4,8 +4,7 @@ import mujoco
 import numpy as np
 import pytest
 
-from wuji_mjlab.assets.robots.myHand import my_hand_cfg
-from wuji_mjlab.assets.robots.myHandRuka import my_hand_ruka_cfg as hc
+from wuji_mjlab.assets.robots.MyHand import my_hand_cfg as hc
 
 
 @pytest.fixture(scope="module")
@@ -31,12 +30,29 @@ def test_eleven_actuators_no_tip_joint(model):
     assert f"right_finger1_joint{j}" in targets
 
 
-def test_same_joints_as_15_actuator_hand(model):
-  base = my_hand_cfg._get_spec(my_hand_cfg._XML_PATH).compile()
-  assert base.nu == 15
+def test_task_joint_names_and_ranges(model):
+  """15 task joints, fingers 2-5 first then the thumb, flexion-only ranges.
+
+  Same joints and limits as the removed 15-actuator myHand model.
+  """
   names = [model.joint(i).name for i in range(model.njnt)]
-  assert names == [base.joint(i).name for i in range(base.njnt)]
-  np.testing.assert_allclose(model.jnt_range, base.jnt_range)
+  expected = [
+    f"right_finger{f}_joint{j}" for f in (2, 3, 4, 5, 1) for j in (1, 2, 3)
+  ]
+  assert names == expected
+  upper_deg = {
+    "right_finger1_joint1": 189.87821331,  # thumb CMC
+    "right_finger1_joint2": 89.95437384,  # thumb MCP
+    "right_finger1_joint3": 119.74817918,  # thumb IP
+  }
+  for f in range(2, 6):
+    upper_deg[f"right_finger{f}_joint1"] = 139.92889864  # MCP
+    upper_deg[f"right_finger{f}_joint2"] = 119.74817918
+    upper_deg[f"right_finger{f}_joint3"] = 119.74817918
+  for i, name in enumerate(names):
+    np.testing.assert_allclose(
+      model.jnt_range[i], (0.0, np.radians(upper_deg[name])), atol=1e-6
+    )
 
 
 def test_tip_joint_follows_middle_joint(model):
@@ -54,9 +70,9 @@ def test_tip_joint_follows_middle_joint(model):
 
 
 def test_xml_gains_match_servo_model(model):
-  """kp/kv/forcerange written in the MJCF == ruka_actuator_params."""
+  """kp/kv/forcerange written in the MJCF == servo_actuator_params."""
   for i in range(model.nu):
-    kp, kv, limit = hc.ruka_actuator_params(_target(model, i))
+    kp, kv, limit = hc.servo_actuator_params(_target(model, i))
     assert model.actuator_gainprm[i, 0] == pytest.approx(kp, rel=1e-3)
     assert model.actuator_biasprm[i, 1] == pytest.approx(-kp, rel=1e-3)
     assert model.actuator_biasprm[i, 2] == pytest.approx(-kv, rel=1e-3)
@@ -66,8 +82,8 @@ def test_xml_gains_match_servo_model(model):
 
 
 def test_tendon_torque_limits():
-  _, _, finger_mcp = hc.ruka_actuator_params("right_finger2_joint1")
-  _, _, thumb_mcp = hc.ruka_actuator_params("right_finger1_joint2")
+  _, _, finger_mcp = hc.servo_actuator_params("right_finger2_joint1")
+  _, _, thumb_mcp = hc.servo_actuator_params("right_finger1_joint2")
   f = hc.SERVO_TORQUE_FRACTION
   assert finger_mcp == pytest.approx(
     3.0 * f / hc.PULLEY_RADIUS_M * hc.TENDON_MOMENT_ARM_M["finger_MCP"]

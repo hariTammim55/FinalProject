@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<mujoco model="MyHand_RUKA_11Actuators">
+<mujoco model="MyHand_11Actuators">
 
   <!--
     MyHand RL model - RUKA tendon version (11 actuators, DIP coupled to PIP).
@@ -429,8 +429,8 @@
       Moment arms (from RUKA's calibrated motor ranges, +-30%):
         finger MCP 8.4 mm, finger PIP+DIP 12.4 mm (sum over both joints),
         thumb CMC 5.3 mm, MCP 7.5 mm, IP 5.3 mm.
-      Recompute with assets/robots/myHandRuka/my_hand_ruka_cfg.py
-      (ruka_actuator_params) when the moment arms or servo limits change.
+      Recompute with assets/robots/MyHand/my_hand_cfg.py
+      (servo_actuator_params) when the moment arms or servo limits change.
     -->
     <position name="Index_MCP_actuator" joint="Index_MCP_Joint"
               kp="5.9948" kv="0.3021" ctrlrange="0 2.44222"
